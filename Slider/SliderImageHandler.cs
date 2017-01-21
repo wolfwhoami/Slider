@@ -29,9 +29,7 @@ namespace Slider
             if (height1 != height2) return -1;
 
             var left = 0;
-            /**
-             * 从左至右扫描
-             */
+            //从左至右扫描
             var flag = false;
             for (var i = 60; i < width1; i++)
             {
