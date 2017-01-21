@@ -97,7 +97,10 @@ namespace Slider
         }
 
 
-
+        /// <summary>
+        /// SlideWithPhantomJs
+        /// </summary>
+        /// <param name="companyName"></param>
         public static void SlideWithPhantomJs(string companyName)
         {
             const string url = "http://www.gsxt.gov.cn/index.html";
