@@ -52,7 +52,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SliderHandler.cs" />
-    <Compile Include="SliderImageHandler.cs" />
+    <Compile Include="SlideImageHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

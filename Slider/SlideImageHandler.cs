@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Slider
 {
-    public static class SliderImageHandler
+    public static class SlideImageHandler
     {
         /// <summary>
         /// 找到两种图片不相等点的x坐标，传入Image
