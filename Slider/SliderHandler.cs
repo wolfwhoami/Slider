@@ -12,14 +12,17 @@ namespace Slider
 {
     public static class SliderHandler
     {
-
-        public static void SlideTest()
+        private static string SlideUseChrome(string companyName)
         {
-            const string url = "http://www.geetest.com/exp_normal";
+            const string url = "http://www.gsxt.gov.cn/index.html";
 
+            //InternetExplorerOptions options = new InternetExplorerOptions();
+            ////取消浏览器的保护模式 设置为true
+            //options.IntroduceInstabilityByIgnoringProtectedModeSettings = true;
+            //这里用chrome浏览器 ie浏览器有问题
             var options = new ChromeOptions();
-            options.AddArgument(
-                "--user-agent=Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25");
+            options.AddArgument("--user-agent=Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25");
+            //options.AddArgument("--start-maximized");
 
             using (var driver = new ChromeDriver(options))
             {
@@ -28,15 +31,15 @@ namespace Slider
 
                 var navigation = driver.Navigate();
                 navigation.GoToUrl(url);
-
+                var keyWord = driver.FindElement(By.Id("keyword"));
+                //keyWord.SendKeys("温州红辣椒电子商务有限公司");
+                keyWord.SendKeys(companyName);
                 //等待时间
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000*50));
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 10));
                 //等待元素全部加载完成
                 wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("btn_query")));
 
-                //# geetest_1484904377463 > div.gt_slider > div.gt_slider_knob.gt_show
-                //*[@id="geetest_1484904377463"]/div[3]/div[2]
-                var js = (IJavaScriptExecutor) driver;
+                var js = (IJavaScriptExecutor)driver;
                 var btnQuery = driver.FindElement(By.Id("btn_query"));
                 //经测试，这里要停一下，不然刚得到元素就click可能不会出现滑动块窗口(很坑的地方)
                 Thread.Sleep(1000);
@@ -66,7 +69,7 @@ namespace Slider
                 Thread.Sleep(1000);
                 //截图得到子图片
                 var imageFirst = GetSubImage(driver, imageBox);
-                imageFirst?.Save("c:/test.png");
+                //imageFirst?.Save("c:/test.png");
 
 
                 var slide = driver.FindElement(By.CssSelector("div.gt_slider_knob.gt_show"));
@@ -77,31 +80,91 @@ namespace Slider
                 Thread.Sleep(1000);
                 //再截图得到子图片
                 var imageSecond = GetSubImage(driver, imageBox);
-                imageSecond?.Save("c:/test1.png");
+                //imageSecond?.Save("c:/test1.png");
 
-                //var random = new Random();
-                var left = SlideImageHandler.FindXDiffRectangeOfTwoImage(imageFirst, imageSecond) - 7;
-                Console.WriteLine($"减7后等于:{left}");
-                if (left <= 0)
-                    return;
-                var pointsTrace = SlideImageHandler.GeTracePoints(left);
+                var pass = false;
+                var tryTimes = 0;
+                //试5次或者pass
+                while (tryTimes++ < 5 && !pass)
+                {
+                    Console.WriteLine($"第{tryTimes}次。");
+                    var left = SlideImageHandler.FindXDiffRectangeOfTwoImage(imageFirst, imageSecond) - 7;
+                    Console.WriteLine($"减7后等于:{left}");
+                    if (left <= 0)
+                        throw new Exception("算出的距离小于等于0");
+                    var pointsTrace = SlideImageHandler.GeTracePoints(left);
 
-                //移动
-                MoveHandler(pointsTrace, action, slide);
-                //先休息一会，不然截图不对
-                Thread.Sleep(1000);
-                var imageThird = GetSubImage(driver, imageBox);
-                imageThird?.Save("c:/test2.png");
+                    //移动
+                    MoveHandler(pointsTrace, action, slide);
+
+                    wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//div[@class='gt_info_text']/span[@class='gt_info_type']")));
+                    //找得到元素，但是它不在当前可见的页面上。
+                    var infoText = driver.FindElement(By.XPath("//div[@class='gt_info_text']/span[@class='gt_info_type']")).Text;
+                    if (infoText.Contains("验证通过"))
+                    {
+                        pass = true;
+                    }
+                    //如果判断为非人行为 刷新验证码 重新截图
+                    else if (infoText.Contains("再来一次"))
+                    {
+                        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.ClassName("gt_refresh_button")));
+                        var refreshButtom = driver.FindElement(By.ClassName("gt_refresh_button"));
+                        refreshButtom.Click();
+                        //等待元素全部加载完成
+                        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector("div.gt_box")));
+                        //找到图片
+                        imageBox = driver.FindElement(By.CssSelector("div.gt_box"));
+                        //先休息一会，不然截图不对
+                        Thread.Sleep(1000);
+                        //截图得到子图片
+                        imageFirst = GetSubImage(driver, imageBox);
+                        //imageFirst?.Save("c:/test.png");
+                        //移到起始位置
+                        action.ClickAndHold(slide).MoveByOffset(0, 0).Perform();
+                        //先休息一会，不然截图不对
+                        Thread.Sleep(1000);
+                        //再截图得到子图片
+                        imageSecond = GetSubImage(driver, imageBox);
+                        //imageSecond?.Save("c:/test1.png");
+                        Console.WriteLine("刷新图片。");
+                        pass = false;
+                    }
+                    else
+                    {
+                        pass = false;
+                    }
+                    Console.WriteLine($"pass:{pass}。");
+                    //先休息一会，不然截图不对
+                    //Thread.Sleep(1000);
+                    var imageThird = GetSubImage(driver, imageBox);
+                    //imageThird?.Save("c:/test2.png");
+
+                }
+
+
+                Console.WriteLine(pass ? "验证通过。" : "验证失败。");
+
+                if (!pass)
+                {
+                    throw new Exception("极速验证码验证失败。");
+                }
+                //得到页面内容
+                return driver.PageSource;
+
 
             }
         }
+
+
+
+
 
 
         /// <summary>
         /// SlideWithPhantomJs
         /// </summary>
         /// <param name="companyName"></param>
-        public static void SlideUsePhantomJs(string companyName)
+        private static string SlideUsePhantomJs(string companyName)
         {
             const string url = "http://www.gsxt.gov.cn/index.html";
 
@@ -121,7 +184,7 @@ namespace Slider
                 //keyWord.SendKeys("温州红辣椒电子商务有限公司");
                 keyWord.SendKeys(companyName);
                 //等待时间
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 50));
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 10));
                 //等待元素全部加载完成
                 wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("btn_query")));
 
@@ -155,7 +218,7 @@ namespace Slider
                 Thread.Sleep(1000);
                 //截图得到子图片
                 var imageFirst = GetSubImage(driver, imageBox);
-                imageFirst?.Save("c:/test.png");
+                //imageFirst?.Save("c:/test.png");
 
 
                 var slide = driver.FindElement(By.CssSelector("div.gt_slider_knob.gt_show"));
@@ -166,7 +229,7 @@ namespace Slider
                 Thread.Sleep(1000);
                 //再截图得到子图片
                 var imageSecond = GetSubImage(driver, imageBox);
-                imageSecond?.Save("c:/test1.png");
+                //imageSecond?.Save("c:/test1.png");
 
                 var pass = false;
                 var tryTimes = 0;
@@ -204,14 +267,14 @@ namespace Slider
                         Thread.Sleep(1000);
                         //截图得到子图片
                         imageFirst = GetSubImage(driver, imageBox);
-                        imageFirst?.Save("c:/test.png");
+                        //imageFirst?.Save("c:/test.png");
                         //移到起始位置
                         action.ClickAndHold(slide).MoveByOffset(0, 0).Perform();
                         //先休息一会，不然截图不对
                         Thread.Sleep(1000);
                         //再截图得到子图片
                         imageSecond = GetSubImage(driver, imageBox);
-                        imageSecond?.Save("c:/test1.png");
+                        //imageSecond?.Save("c:/test1.png");
                         Console.WriteLine("刷新图片。");
                         pass = false;
                     }
@@ -223,168 +286,31 @@ namespace Slider
                     //先休息一会，不然截图不对
                     //Thread.Sleep(1000);
                     var imageThird = GetSubImage(driver, imageBox);
-                    imageThird?.Save("c:/test2.png");
+                    //imageThird?.Save("c:/test2.png");
 
                 }
 
 
                 Console.WriteLine(pass ? "验证通过。" : "验证失败。");
-
+                if (!pass)
+                {
+                    throw new Exception("极速验证码验证失败。");
+                }
                 //得到页面内容
-                //var html = driver.PageSource;
-                //Console.WriteLine(html);
+                return driver.PageSource;
 
-                Console.WriteLine("QAQ");
-                Console.WriteLine("OVO");
-                Console.WriteLine("休息2秒。");
-                Thread.Sleep(1000 * 2);
             }
         }
 
-
-
-        public static void SlideUseChrome(string companyName)
+        /// <summary>
+        /// GetHtml
+        /// </summary>
+        /// <param name="companyName"></param>
+        /// <returns></returns>
+        public static string GetHtml(string companyName)
         {
-            const string url = "http://www.gsxt.gov.cn/index.html";
-
-            //InternetExplorerOptions options = new InternetExplorerOptions();
-            ////取消浏览器的保护模式 设置为true
-            //options.IntroduceInstabilityByIgnoringProtectedModeSettings = true;
-            //这里用chrome浏览器 ie浏览器有问题
-            var options = new ChromeOptions();
-            options.AddArgument("--user-agent=Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25");
-
-            using (var driver = new ChromeDriver(options))
-            {
-                //设置浏览器大小 设置为最大 元素的X,Y坐标就准了 不然就不准(不知道原因)
-                driver.Manage().Window.Maximize();
-
-                var navigation = driver.Navigate();
-                navigation.GoToUrl(url);
-                var keyWord = driver.FindElement(By.Id("keyword"));
-                //keyWord.SendKeys("温州红辣椒电子商务有限公司");
-                keyWord.SendKeys(companyName);
-                //等待时间
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 50));
-                //等待元素全部加载完成
-                wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("btn_query")));
-
-                var js = (IJavaScriptExecutor)driver;
-                var btnQuery = driver.FindElement(By.Id("btn_query"));
-                //经测试，这里要停一下，不然刚得到元素就click可能不会出现滑动块窗口(很坑的地方)
-                Thread.Sleep(1000);
-                js.ExecuteScript("arguments[0].click();", btnQuery);
-                //btnQuery.Click();
-                //btnQuery.SendKeys(Keys.Enter);
-
-                //截图加滑动处理
-                //因为只有一个弹出窗口，所以直接进到这个里面就好了
-                var allWindowsId = driver.WindowHandles;
-                if (allWindowsId.Count != 1)
-                    throw new Exception("多个弹出窗口。");
-
-                foreach (var windowId in allWindowsId)
-                {
-
-                    driver.SwitchTo().Window(windowId);
-                }
-
-
-                //等待元素全部加载完成
-                wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector("div.gt_box")));
-
-                //找到图片
-                var imageBox = driver.FindElement(By.CssSelector("div.gt_box"));
-                //先休息一会，不然截图不对
-                Thread.Sleep(1000);
-                //截图得到子图片
-                var imageFirst = GetSubImage(driver, imageBox);
-                imageFirst?.Save("c:/test.png");
-
-
-                var slide = driver.FindElement(By.CssSelector("div.gt_slider_knob.gt_show"));
-                var action = new Actions(driver);
-                //移到起始位置
-                action.ClickAndHold(slide).MoveByOffset(0, 0).Perform();
-                //先休息一会，不然截图不对
-                Thread.Sleep(1000);
-                //再截图得到子图片
-                var imageSecond = GetSubImage(driver, imageBox);
-                imageSecond?.Save("c:/test1.png");
-
-                var pass = false;
-                var tryTimes = 0;
-                //试5次或者pass
-                while (tryTimes++ < 5 && !pass)
-                {
-                    Console.WriteLine($"第{tryTimes}次。");
-                    var left = SlideImageHandler.FindXDiffRectangeOfTwoImage(imageFirst, imageSecond) - 7;
-                    Console.WriteLine($"减7后等于:{left}");
-                    if (left <= 0)
-                        throw new Exception("算出的距离小于等于0");
-                    var pointsTrace = SlideImageHandler.GeTracePoints(left);
-
-                    //移动
-                    MoveHandler(pointsTrace, action, slide);
-
-                    wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//div[@class='gt_info_text']/span[@class='gt_info_type']")));
-                    //找得到元素，但是它不在当前可见的页面上。
-                    var infoText = driver.FindElement(By.XPath("//div[@class='gt_info_text']/span[@class='gt_info_type']")).Text;
-                    if (infoText.Contains("验证通过"))
-                    {
-                        pass = true;
-                    }
-                    //如果判断为非人行为 刷新验证码 重新截图
-                    else if (infoText.Contains("再来一次"))
-                    {
-                        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.ClassName("gt_refresh_button")));
-                        var refreshButtom = driver.FindElement(By.ClassName("gt_refresh_button"));
-                        refreshButtom.Click();
-                        //等待元素全部加载完成
-                        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector("div.gt_box")));
-                        //找到图片
-                        imageBox = driver.FindElement(By.CssSelector("div.gt_box"));
-                        //先休息一会，不然截图不对
-                        Thread.Sleep(1000);
-                        //截图得到子图片
-                        imageFirst = GetSubImage(driver, imageBox);
-                        imageFirst?.Save("c:/test.png");
-                        //移到起始位置
-                        action.ClickAndHold(slide).MoveByOffset(0, 0).Perform();
-                        //先休息一会，不然截图不对
-                        Thread.Sleep(1000);
-                        //再截图得到子图片
-                        imageSecond = GetSubImage(driver, imageBox);
-                        imageSecond?.Save("c:/test1.png");
-                        Console.WriteLine("刷新图片。");
-                        pass = false;
-                    }
-                    else
-                    {
-                        pass = false;
-                    }
-                    Console.WriteLine($"pass:{pass}。");
-                    //先休息一会，不然截图不对
-                    //Thread.Sleep(1000);
-                    var imageThird = GetSubImage(driver, imageBox);
-                    imageThird?.Save("c:/test2.png");
-
-                }
-
-
-                Console.WriteLine(pass ? "验证通过。" : "验证失败。");
-
-                //得到页面内容
-                //var html = driver.PageSource;
-                //Console.WriteLine(html);
-
-                Console.WriteLine("QAQ");
-                Console.WriteLine("OVO");
-                Console.WriteLine("休息2秒。");
-                Thread.Sleep(1000 * 2);
-
-
-            }
+            //return SlideUsePhantomJs(companyName);
+            return SlideUseChrome(companyName);
         }
 
         /// <summary>
@@ -396,18 +322,23 @@ namespace Slider
             var companyNames = File.ReadAllLines(@"C:\Users\Administrator\Desktop\companyname.txt");
             foreach (var companyName in companyNames)
             {
-                //SlideUseChrome(companyName);
-                SlideUsePhantomJs(companyName);
+                //SlideUsePhantomJs(companyName);
+                SlideUseChrome(companyName);
             }
         }
 
-
+        /// <summary>
+        /// MoveHandler
+        /// </summary>
+        /// <param name="pointsTrace"></param>
+        /// <param name="action"></param>
+        /// <param name="webElement"></param>
         private static void MoveHandler(PointTrace[] pointsTrace, Actions action, IWebElement webElement)
         {
 
             var preY = 0;
 
-            //这里还要研究一下 不要从起始位置开始啦
+            //鼠标移位置
             var length = pointsTrace.Length;
             for (var i = 0; i < length; i++)
             {
@@ -429,7 +360,6 @@ namespace Slider
 
 
                 Thread.Sleep(TimeSpan.FromMilliseconds(pointsTrace[i].SleepTime));
-
 
             }
 
@@ -488,7 +418,6 @@ namespace Slider
             var image = GetSubImage(byteArray, x, y, width, height);
             return image;
         }
-
 
         /// <summary>
         /// GetSubImage

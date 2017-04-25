@@ -8,77 +8,87 @@ namespace Slider
     public static class SlideImageHandler
     {
         /// <summary>
-        /// 找到两种图片不相等点的x坐标，传入Image
+        /// 找到两种图片不相等点的x坐标
         /// </summary>
         /// <param name="imageFirst"></param>
         /// <param name="imageSecond"></param>
         /// <returns></returns>
         public static int FindXDiffRectangeOfTwoImage(Image imageFirst, Image imageSecond)
         {
-
-
-            var image1 = new Bitmap(imageFirst);
-            var image2 = new Bitmap(imageSecond);
-
-            var width1 = image1.Width;
-            var height1 = image1.Height;
-            var width2 = image2.Width;
-            var height2 = image2.Height;
-
-            if (width1 != width2) return -1;
-            if (height1 != height2) return -1;
-
-            var left = 0;
-            //从左至右扫描
-            var flag = false;
-            for (var i = 60; i < width1; i++)
+            try
             {
-                for (var j = 0; j < height1; j++)
-                    if (IsPixelNotEqual(image1, image2, i, j))
-                    {
-                        left = i;
-                        flag = true;
-                        break;
-                    }
-                if (flag) break;
-            }
 
-            if (left <= 60)
-            {
-                flag = false;
-                //如果left小于等于60 从右至左
-                for (var i = 260; i > 60; i--)
+                var image1 = new Bitmap(imageFirst);
+                var image2 = new Bitmap(imageSecond);
+
+
+                //BufferedImage image1 = ImageIO.read(new File(imageFirst));
+                //BufferedImage image2 = ImageIO.read(new File(imageSecond));
+                int width1 = image1.Width;
+                int height1 = image1.Height;
+                int width2 = image2.Width;
+                int height2 = image2.Height;
+
+                if (width1 != width2) return -1;
+                if (height1 != height2) return -1;
+
+                int left = 0;
+                /**
+                 * 从左至右扫描
+                 */
+                bool flag = false;
+                for (int i = 60; i < width1; i++)
                 {
-                    for (var j = 0; j < height1; j++)
+                    for (int j = 0; j < height1; j++)
                         if (IsPixelNotEqual(image1, image2, i, j))
                         {
                             left = i;
                             flag = true;
                             break;
                         }
-                    if (flag)
-                    {
-                        //滑块大小45
-                        left -= 45;
-                        break;
-                    }
+                    if (flag) break;
                 }
 
-                Console.WriteLine($"从右往左算出:{left}");
+                if (left <= 60)
+                {
+                    flag = false;
+                    //如果left小于等于60 从右至左
+                    for (int i = 260; i > 60; i--)
+                    {
+                        for (int j = 0; j < height1; j++)
+                            if (IsPixelNotEqual(image1, image2, i, j))
+                            {
+                                left = i;
+                                flag = true;
+                                break;
+                            }
+                        if (flag)
+                        {
+                            left -= 45;
+                            break;
+                        }
+                    }
+
+                    Console.WriteLine($"从右往左算出:{left}");
+                }
+                else
+                {
+                    Console.WriteLine($"从左往右算出:{left}");
+                }
+
+                return left;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"从左往右算出:{left}");
+                Console.Write(ex.Message);
+                return -1;
             }
-
-            return left;
-
         }
 
 
 
         /// <summary>
-        /// 找到两种图片不相等点的x坐标,传入路径
+        /// 找到两种图片不相等点的x坐标
         /// </summary>
         /// <param name="imageFirst"></param>
         /// <param name="imageSecond"></param>
@@ -104,17 +114,17 @@ namespace Slider
             var pixel1 = image1.GetPixel(i, j);
             var pixel2 = image2.GetPixel(i, j);
 
-            var rgb1 = new int[3];
+            int[] rgb1 = new int[3];
             rgb1[0] = pixel1.R;
             rgb1[1] = pixel1.G;
             rgb1[2] = pixel1.B;
 
-            var rgb2 = new int[3];
+            int[] rgb2 = new int[3];
             rgb2[0] = pixel2.R;
             rgb2[1] = pixel2.G;
             rgb2[2] = pixel1.B;
 
-            for (var k = 0; k < 3; k++)
+            for (int k = 0; k < 3; k++)
                 if (Math.Abs(rgb1[k] - rgb2[k]) > 100)//因为背景图会有一些像素差异
                     return true;
 
@@ -123,7 +133,7 @@ namespace Slider
 
 
         /// <summary>
-        /// GeTracePoints，得到轨迹点
+        /// GeTracePoints
         /// </summary>
         /// <param name="distance"></param>
         /// <returns></returns>
@@ -213,6 +223,94 @@ namespace Slider
 
         }
 
+        /// <summary>
+        /// GeTracePoints
+        /// </summary>
+        /// <param name="distance"></param>
+        /// <returns></returns>
+        public static PointTrace[] GeTracePoints1(int distance)
+        {
+            var random = new Random();
+
+            var curDistance = 0;
+            var totalSleepTime = 0D;
+            var listX = new List<int>();
+            var listY = new List<int>();
+            var listSleepTime = new List<double>();
+
+            //先加一个初始点
+            listX.Add(0);
+            listY.Add(random.Next(-2, 2));
+            listSleepTime.Add(NextDouble(random, 10, 50));
+
+
+            //curDistance = curDistance + curDistance + random.Next(1, 5);
+            while (Math.Abs(distance - curDistance) > 1)
+            {
+                var moveX = random.Next(1, 5);
+                curDistance += moveX;
+                var moveY = random.Next(-2, 2);
+                var sleepTime = NextDouble(random, 10, 50);
+                listX.Add(curDistance);
+                listY.Add(moveY);
+                listSleepTime.Add(sleepTime);
+                totalSleepTime += sleepTime;
+                //如果当前的距离大于等于给的距离退出
+                if (curDistance >= distance)
+                    break;
+            }
+
+            //如果移过头了 最后终点加入
+            if (curDistance > distance)
+            {
+                listX.Add(distance);
+                listY.Add(random.Next(-2, 2));
+                listSleepTime.Add(NextDouble(random, 10, 50));
+            }
+
+
+
+            //长度
+            var length = listSleepTime.Count;
+            const int maxTotalSleepTime = 5 * 1000;
+            if (totalSleepTime > maxTotalSleepTime)
+            {
+                //统计时间
+                totalSleepTime = 0.0D;
+                for (var i = 0; i < length; i++)
+                {
+                    //按比例缩小时间
+                    listSleepTime[i] = listSleepTime[i] * (maxTotalSleepTime / totalSleepTime);
+                    totalSleepTime += listSleepTime[i];
+                }
+            }
+            //输出总时间
+            Console.WriteLine($"滑块滑动总时间:{totalSleepTime}");
+
+
+            var tracePoints = new PointTrace[length];
+            for (var i = 0; i < length; i++)
+            {
+                tracePoints[i] = new PointTrace
+                {
+                    XOffset = listX[i],
+                    YOffset = listY[i],
+                    SleepTime = listSleepTime[i]
+                };
+            }
+
+            //输出轨迹值
+            Console.WriteLine("输出轨迹值。");
+            for (var i = 0; i < length; i++)
+            {
+
+                Console.WriteLine($"滑块轨迹;X:{tracePoints[i].XOffset},Y:{tracePoints[i].YOffset},Time:{tracePoints[i].SleepTime}");
+            }
+
+
+            return tracePoints;
+
+        }
 
         /// <summary>
         /// 返回double类型的随机数
@@ -232,9 +330,7 @@ namespace Slider
                 return 0.0D;
             }
         }
-
     }
-
 
     /// <summary>
     /// 轨迹点
