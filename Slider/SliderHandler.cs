@@ -8,6 +8,7 @@ using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.PhantomJS;
 using OpenQA.Selenium.Support.UI;
 
+
 namespace Slider
 {
     public static class SliderHandler
@@ -21,7 +22,7 @@ namespace Slider
             //options.IntroduceInstabilityByIgnoringProtectedModeSettings = true;
             //这里用chrome浏览器 ie浏览器有问题
             var options = new ChromeOptions();
-            options.AddArgument("--user-agent=Mozilla/5.0 (iPad; CPU OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5355d Safari/8536.25");
+            options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36");
             //options.AddArgument("--start-maximized");
 
             using (var driver = new ChromeDriver(options))
@@ -29,13 +30,17 @@ namespace Slider
                 //设置浏览器大小 设置为最大 元素的X,Y坐标就准了 不然就不准(不知道原因)
                 driver.Manage().Window.Maximize();
 
+
                 var navigation = driver.Navigate();
                 navigation.GoToUrl(url);
+                //等待时间
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+                //等待元素全部加载完成
+                wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("keyword")));
                 var keyWord = driver.FindElement(By.Id("keyword"));
                 //keyWord.SendKeys("温州红辣椒电子商务有限公司");
                 keyWord.SendKeys(companyName);
-                //等待时间
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 10));
+                
                 //等待元素全部加载完成
                 wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("btn_query")));
 
@@ -69,7 +74,7 @@ namespace Slider
                 Thread.Sleep(1000);
                 //截图得到子图片
                 var imageFirst = GetSubImage(driver, imageBox);
-                //imageFirst?.Save("c:/test.png");
+                imageFirst?.Save("c:/test.png");
 
 
                 var slide = driver.FindElement(By.CssSelector("div.gt_slider_knob.gt_show"));
@@ -80,7 +85,7 @@ namespace Slider
                 Thread.Sleep(1000);
                 //再截图得到子图片
                 var imageSecond = GetSubImage(driver, imageBox);
-                //imageSecond?.Save("c:/test1.png");
+                imageSecond?.Save("c:/test1.png");
 
                 var pass = false;
                 var tryTimes = 0;
@@ -91,7 +96,11 @@ namespace Slider
                     var left = SlideImageHandler.FindXDiffRectangeOfTwoImage(imageFirst, imageSecond) - 7;
                     Console.WriteLine($"减7后等于:{left}");
                     if (left <= 0)
-                        throw new Exception("算出的距离小于等于0");
+                    {
+                        Console.WriteLine("算出的距离小于等于0");  
+                        continue;
+                        //throw new Exception("算出的距离小于等于0");
+                    }
                     var pointsTrace = SlideImageHandler.GeTracePoints(left);
 
                     //移动
@@ -118,14 +127,14 @@ namespace Slider
                         Thread.Sleep(1000);
                         //截图得到子图片
                         imageFirst = GetSubImage(driver, imageBox);
-                        //imageFirst?.Save("c:/test.png");
+                        imageFirst?.Save("c:/test.png");
                         //移到起始位置
                         action.ClickAndHold(slide).MoveByOffset(0, 0).Perform();
                         //先休息一会，不然截图不对
                         Thread.Sleep(1000);
                         //再截图得到子图片
                         imageSecond = GetSubImage(driver, imageBox);
-                        //imageSecond?.Save("c:/test1.png");
+                        imageSecond?.Save("c:/test1.png");
                         Console.WriteLine("刷新图片。");
                         pass = false;
                     }
@@ -137,7 +146,7 @@ namespace Slider
                     //先休息一会，不然截图不对
                     //Thread.Sleep(1000);
                     var imageThird = GetSubImage(driver, imageBox);
-                    //imageThird?.Save("c:/test2.png");
+                    imageThird?.Save("c:/test2.png");
 
                 }
 
@@ -146,7 +155,8 @@ namespace Slider
 
                 if (!pass)
                 {
-                    throw new Exception("极速验证码验证失败。");
+                    Console.WriteLine("极速验证码验证失败。");
+                    //throw new Exception("极速验证码验证失败。");
                 }
                 //得到页面内容
                 return driver.PageSource;
@@ -169,7 +179,7 @@ namespace Slider
             const string url = "http://www.gsxt.gov.cn/index.html";
 
             var userAgent =
-                @"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36";
+                @"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36";
             var options = new PhantomJSOptions();
             options.AddAdditionalCapability(@"phantomjs.page.settings.userAgent", userAgent);
 
@@ -180,14 +190,16 @@ namespace Slider
 
                 var navigation = driver.Navigate();
                 navigation.GoToUrl(url);
+                //等待时间
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+                //等待元素全部加载完成
+                wait.Until(ExpectedConditions.ElementExists(By.Id("keyword")));
                 var keyWord = driver.FindElement(By.Id("keyword"));
                 //keyWord.SendKeys("温州红辣椒电子商务有限公司");
                 keyWord.SendKeys(companyName);
-                //等待时间
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(1000 * 10));
+                
                 //等待元素全部加载完成
                 wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("btn_query")));
-
                 var js = (IJavaScriptExecutor)driver;
                 var btnQuery = driver.FindElement(By.Id("btn_query"));
                 //经测试，这里要停一下，不然刚得到元素就click可能不会出现滑动块窗口(很坑的地方)
@@ -240,7 +252,11 @@ namespace Slider
                     var left = SlideImageHandler.FindXDiffRectangeOfTwoImage(imageFirst, imageSecond) - 7;
                     Console.WriteLine($"减7后等于:{left}");
                     if (left <= 0)
-                        throw new Exception("算出的距离小于等于0");
+                    {
+                        Console.WriteLine("算出的距离小于等于0"); 
+                        continue;
+                        //throw new Exception("算出的距离小于等于0");
+                    }
                     var pointsTrace = SlideImageHandler.GeTracePoints(left);
 
                     //移动
@@ -309,8 +325,8 @@ namespace Slider
         /// <returns></returns>
         public static string GetHtml(string companyName)
         {
-            //return SlideUsePhantomJs(companyName);
-            return SlideUseChrome(companyName);
+            return SlideUsePhantomJs(companyName);
+            //return SlideUseChrome(companyName);
         }
 
         /// <summary>
@@ -336,6 +352,7 @@ namespace Slider
         private static void MoveHandler(PointTrace[] pointsTrace, Actions action, IWebElement webElement)
         {
 
+            
             var preY = 0;
 
             //鼠标移位置

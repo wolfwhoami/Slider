@@ -53,7 +53,7 @@ namespace Slider
                 {
                     flag = false;
                     //如果left小于等于60 从右至左
-                    for (int i = 260; i > 60; i--)
+                    for (int i = width1; i > 60; i--)
                     {
                         for (int j = 0; j < height1; j++)
                             if (IsPixelNotEqual(image1, image2, i, j))
