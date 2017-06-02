@@ -8,7 +8,7 @@ namespace Slider
     {
         static void Main(string[] args)
         {
-
+            SliderHandler.Test();
         }
     }
 }
